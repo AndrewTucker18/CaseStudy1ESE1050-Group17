@@ -1,5 +1,4 @@
 
-clear all;
 close all;
 
 %% In this script, you need to implement three functions as part of the k-means algorithm.
