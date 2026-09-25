@@ -27,7 +27,7 @@ train=train(:,1:784);
 train(:,785)=zeros(1500,1);
 
 % testing set (200 images with 11 outliers)
-test=csvread('mnist_test_200_woutliers.csv');
+test=csvread('mnist_test_200.csv');
 % store the correct test labels
 correctlabels = test(:,785);
 test=test(:,1:784);
@@ -38,7 +38,7 @@ test=test(:,1:784);
 test(:,785)=zeros(200,1);
 
 %% After initializing, you will have the following variables in your workspace:
-% 1. train (a 1500 x 785 array, containins the 1500 training images)
+% 1. train (a 1500 x 785 array, contains the 1500 training images)
 % 2. test (a 200 x 785 array, containing the 200 testing images)
 % 3. correctlabels (a 200 x 1 array containing the correct labels (numerical
 % meaning) of the 200 test images
@@ -53,7 +53,7 @@ testimage = reshape(test(1,[1:784]), [28 28]);
 % we are reshaping the first row of 'test', columns 1-784 (since the 785th
 % column is going to be used for storing the centroid assignment.
 imagesc(testimage'); % this command plots an array as an image.  Type 'help imagesc' to learn more.
-
+ 
 %% After importing, the array 'train' consists of 1500 rows and 785 columns.
 % Each row corresponds to a different handwritten digit (28 x 28 = 784)
 % plus the last column, which is used to index that row (i.e., label which
@@ -62,8 +62,8 @@ imagesc(testimage'); % this command plots an array as an image.  Type 'help imag
 
 %% This next section of code calls the three functions you are asked to specify
 
-k= ; % set k
-max_iter= ; % set the number of iterations of the algorithm
+ k= 20; % set k
+max_iter= 10; % set the number of iterations of the algorithm
 
 %% The next line initializes the centroids.  Look at the initialize_centroids()
 % function, which is specified further down this file.
@@ -77,16 +77,34 @@ cost_iteration = zeros(max_iter, 1);
 %% This for-loop enacts the k-means algorithm
 
 for iter=1:max_iter
-    
-      % FILL THIS IN!
-    
-end
+        
 
+cost = 0;
+%Runs through each vector (image) in training data 
+    for i = 1:1500
+%Finds the closest centroid to each vector and the corresponding index
+        [vectorDistance,index] = assign_vector_to_centroid(train(i,:), centroids);
+
+% Puts each index value in the 785th column
+% Adds cost cumulatively (vectorDistance was squared in the assign_vector function)
+        train(i,785) = index;
+        cost = cost + vectorDistance; 
+    
+    end
+ %Divides the total cost of all distances this iteration by 784, since the 785th dimension isn't a distance   
+    cost_iteration(iter) = cost/(length(train)-1);
+
+    centroids = update_Centroids(train,k);
+   
+end
 %% This section of code plots the k-means cost as a function of the number
 % of iterations
 
 figure;
-% FILL THIS IN!
+plot(1:max_iter,cost_iteration);
+xlabel("Iterations")
+ylabel("Cost")
+title("How K-Means cost changes over the Iterations")
 
 
 %% This next section of code will make a plot of all of the centroids
@@ -129,20 +147,40 @@ end
 % It returns the index of the assigned centroid and the distance between
 % the vector and the assigned centroid.
 
-function [index, vec_distance] = assign_vector_to_centroid(data,centroids)
+function [vec_distance, index] = assign_vector_to_centroid(data,centroids)
 
-% FILL THIS IN
+%Initializes vector that will store all the distances from each centroid to
+%the particular "data" vector 
+centroidDistance = zeros(size(centroids,1),1);
+%Loops through all the centroids 
+for j = 1:size(centroids,1)
+% Recreating formula on page 95 of textbook, finds the difference
+% between a single image and all its 784 dimensions and one of the centroids and all its 784 dimensions. 
+    centroidDistance(j) = power(norm(data(:,1:end-1)-centroids(j,1:end-1)),2);    
+end
+% returns minimum centroid distance and the index of that centroid
+[vec_distance,index] = min(centroidDistance);
 
 end
-
 
 %% Function to compute new centroids using the mean of the vectors currently assigned to the centroid.
 % This function takes the set of training images and the value of k.
 % It returns a new set of centroids based on the current assignment of the
 % training images.
 
-function new_centroids=update_Centroids(data,K)
+function new_centroids=update_Centroids(data,k)
 
-% FILL THIS IN
+new_centroids = zeros(k,size(data,2));
+
+for i = 1:k
+% Adds vectors to assigned_vectors only if their index column matches the
+% centroid's number
+    assigned_vectors = data(data(:,785) == i, 1:end-1);
+%Takes the mean of each column in assigned_vectors and outputs that as the
+%new centroid 
+    new_centroids(i,1:784) = mean(assigned_vectors,1);
+    
+
+end 
 
 end
