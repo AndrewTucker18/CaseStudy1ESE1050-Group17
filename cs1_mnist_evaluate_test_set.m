@@ -7,31 +7,48 @@
 % AND
 % 3)'test' be established in the workspace
 
+% save("classifierdata.mat","centroid_labels","centroids")
+
 
 % IMPORTANT!!:
 % You should save 1) and 2) in a file named 'classifierdata.mat' as part of
 % your submission.
 
-predictions = zeros(200,1);
-outliers = zeros(200,1);
-testGroupings = zeros(200,1);
-testDistances = zeros(200,2);
-% loop through the test set, figure out the predicted number
-for i = 1:200
+% Initialize the Workspace
+test=readmatrix('mnist_test_200.csv');
+correctlabels = test(:,785);
+test=test(:,1:784);
+test(:,785)=zeros(size(test,1),1);
+load("classifierdata.mat");
 
-testing_vector=test(i,:);
+
+
+%This value is gained through taking the minimum distance of the test outliers
+outlierThreshold = 4224600;
+
+predictions = zeros(size(test,1),1);
+outliers = zeros(size(test,1),1);
+testGroupings = zeros(size(test,1),1);
+testDistances = zeros(size(test,1),2);
+% loop through the test set, figure out the predicted number
+for i = 1:(size(test,1)); 
+
+    testing_vector=test(i,:);
 
 % Extract the centroid that is closest to the test image
 
-[vec_distance,prediction_index] = assign_vector_to_centroid(testing_vector, centroids);
-testGroupings(i) = prediction_index;
-predictions(i) = centroid_labels(prediction_index);
-testDistances(i) = vec_distance;
+    [vec_distance,prediction_index] = assign_vector_to_centroid(testing_vector, centroids);
+    testGroupings(i) = prediction_index;
+    predictions(i) = centroid_labels(prediction_index);
+    testDistances(i) = vec_distance;
+
 end
 
 %% DESIGN AND IMPLEMENT A STRATEGY TO SET THE outliers VECTOR
 % outliers(i) should be set to 1 if the i^th entry is an outlier
 % otherwise, outliers(i) should be 0
+
+% This code is how we calculated the outlierThreshold ///
 
 
 [sortedDistances,indexes] = sort(testDistances,"descend");
@@ -39,31 +56,41 @@ end
 
 figure;
 colormap('gray');
-n = 0
+n = 0;
 
-% Plots 11 test outliers  for visual reference
+% Plots 11 test outliers for visual reference
 for i=1:11
-plotsize = ceil(sqrt(11));
-n = n+1
-ind=indexes(i)
+    plotsize = ceil(sqrt(11));
+    n = n+1;
+    ind=indexes(i);
 
     e = test(ind,[1:784]);
     subplot(plotsize,plotsize,n);
 
     imagesc(reshape(e,[28 28])');
-    title(strcat("Outlier ",num2str(ind)))
-
+    title(strcat("Outlier ", num2str(n)))
 end
 
 % Takes the minimum distance of all the outliers, which is the 11th row of
 % sorted distances, and sets that as the bar for a new image set. If the
 % distance for a new image is greater than this minimum bar, then that
 % image is classified as an outlier. 
-for j = 1:200 
+for j = 1:size(test,1) 
     if (sortedDistances(11) <= testDistances(j))
             outliers(j) = 1;
     end   
 end
+
+outlierThreshold = min(testDistances(outliers == 1));
+disp(testDistances(outliers == 1))
+disp(outlierThreshold)
+
+%}
+
+% /// This is the end of the code that we used to calculate outlierThreshold
+
+outliers = (testDistances(:,1) >= outlierThreshold);
+    
 
 
 %% MAKE A STEM PLOT OF THE OUTLIER FLAG
@@ -79,26 +106,39 @@ plot(predictions,'x');
 title('Predictions');
 
 %% The following line provides the number of instances where and entry in correctlabel is
-% equatl to the corresponding entry in prediction
+% equal to the corresponding entry in prediction
 % However, remember that some of these are outliers
 
-correct_percentage = sum(correctlabels == predictions)/200 * 100
+correct_percentage = sum(correctlabels == predictions)/(size(test,1)) * 100;
+disp("Accuracy: " + num2str(correct_percentage) + "%");
 
-
-
-
+noOutliers = (outliers == 0);
+correct_percentage_NO = sum(correctlabels(noOutliers) == predictions(noOutliers))/((size(test(noOutliers),1))) * 100;
+disp("Accuracy Without Outliers: " + num2str(correct_percentage_NO) + "%");
+figure;
+plot(correctlabels(noOutliers),'o');
+hold on;
+plot(predictions(noOutliers),'x');
+title('Predictions Without Outliers');
 
 function [vec_distance, index] = assign_vector_to_centroid(data,centroids)
 
-%Initializes vector that will store all the distances from each centroid to
-%the particular "data" vector 
-centroidDistance = zeros(size(centroids,1),1);
-%Loops through all the centroids 
-for j = 1:size(centroids,1)
-% Recreating formula on page 95 of textbook, finds the difference
-% between a single image and all its 784 dimensions and one of the centroids and all its 784 dimensions. 
-    centroidDistance(j) = power(norm(data(1:784)-centroids(j,1:784)),2);    
+    %Initializes vector that will store all the distances from each centroid to
+    %the particular "data" vector 
+    centroidDistance = zeros(size(centroids,1),1);
+    %Loops through all the centroids 
+    for j = 1:size(centroids,1)
+        % Recreating formula on page 95 of textbook, finds the difference
+        % between a single image and all its 784 dimensions and one of the centroids and all its 784 dimensions. 
+        centroidDistance(j) = power(norm(data(1:784)-centroids(j,1:784)),2);    
+    end
+    % returns minimum centroid distance and the index of that centroid
+    [vec_distance,index] = min(centroidDistance);
 end
-% returns minimum centroid distance and the index of that centroid
-[vec_distance,index] = min(centroidDistance);
-end
+
+figure;
+% This came from manual testing of higher cluster values
+plot([15,20,25,30,50,100],[70.5,71,63.5,70,74,78.5]);
+title('Number of Clusters vs Accuracy')
+xlabel('Number of Clusters (k Value)') 
+ylabel('Accuracy (%)') 
